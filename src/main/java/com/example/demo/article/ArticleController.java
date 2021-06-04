@@ -1,12 +1,9 @@
 package com.example.demo.article;
-
-
 import com.fasterxml.jackson.databind.util.JSONPObject;
 import org.apache.tomcat.util.json.JSONParser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
-
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -24,10 +21,8 @@ public class ArticleController {
         this.articleService = articleService;
     }
 
-
     @GetMapping
-    public List<Article> getArticles(
-
+    public List<Article> getArticlesQuery(
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String author,
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fromCreateDateTime,
@@ -37,13 +32,10 @@ public class ArticleController {
             @RequestParam(required = false) String fullText,
             @RequestParam(required = false) String orderBy
     ) {
-
-
-
-        return articleService.getArticles(category, author, fromCreateDateTime, toCreateDateTime, title, text, fullText, orderBy);
+        return articleService.getArticlesQuery(category, author, fromCreateDateTime, toCreateDateTime, title, text, fullText, orderBy);
     }
-    @GetMapping(path = "{articleId}")
-    public Optional<Article> getArticlesById(@PathVariable("articleId") Long articleId) {
+    @GetMapping("/{articleId}")
+    public Article getArticlesById(@PathVariable("articleId") Long articleId) {
         return articleService.getArticlesById(articleId);
     }
     @PostMapping
@@ -51,22 +43,12 @@ public class ArticleController {
         articleService.addNewArticle(article);
     }
 
-
-    @PatchMapping(path = "{articleId}")
-    public void updateArticle(
-            @PathVariable("articleId") Long articleId,
-            @RequestParam(required = false) String title,
-            @RequestParam(required = false) String teaser,
-            @RequestParam(required = false) String text,
-            @RequestParam(required = false) String picture,
-            @RequestParam(required = false) String category,
-            @RequestParam(required = false) String author) {
-        articleService.updateArticle(articleId, title, teaser, text, picture, category, author);
+    @PatchMapping("/{articleId}")
+    public void updateArticleEfficient(@RequestBody Article article){
+        articleService.updateArticleEfficient(article);
     }
 
-
-
-    @DeleteMapping(path = "{articleId}")
+    @DeleteMapping("/{articleId}")
     public void deleteArticle(@PathVariable("articleId") Long articleId) {
         articleService.deleteArticle(articleId);
     }

@@ -6,12 +6,12 @@ import java.time.ZoneId;
 
 @Entity
 @Table
-public class Article {
+public class Article{
     @Id //JAVA AP
     @SequenceGenerator(
-        name = "article_sequence",
-        sequenceName = "article_sequence",
-        allocationSize = 1
+            name = "article_sequence",
+            sequenceName = "article_sequence",
+            allocationSize = 1
     )
     @GeneratedValue(
             strategy = GenerationType.SEQUENCE,

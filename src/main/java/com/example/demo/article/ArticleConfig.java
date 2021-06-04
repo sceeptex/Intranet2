@@ -23,17 +23,25 @@ public class ArticleConfig {
                     "ich"
             );
             Article article2 = new Article(
-                    "firstArticle",
+                    "secondArticle",
                     "Check it out",
                     "wohoho",
                     "GDrive/test1/test",
                     "FINANCE",
                     "ich"
             );
+            Article article3 = new Article(
+                    "thirdArticle",
+                    "Check it out",
+                    "wohoho",
+                    "GDrive/test2/test",
+                    "NEWS",
+                    "ich"
+            );
 
             //save to db
             repository.saveAll(
-                    List.of(article1, article2)
+                    List.of(article1, article2,article3)
             );
         };
     }

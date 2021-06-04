@@ -8,12 +8,10 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.persistence.Transient;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
-@Service //could be @Component
+
+@Service
 public class ArticleService {
 
     private final ArticleRepository articleRepository;
@@ -25,71 +23,100 @@ public class ArticleService {
         this.categoryRepository = categoryRepository;
     }
 
-    //GET with Query
-    public List<Article> getArticles(String category, String author, LocalDateTime fromCreateDateTime, LocalDateTime toCreateDateTime, String title, String text, String fullText, String orderBy) {
-        List<Article> articleList = articleRepository.findAll();
-
-
-        //Restriction 1 category
-        List<Article> removeList1 = new ArrayList<Article>();
-        if (category != null && category.length() > 0){
-            for (Article article : articleList) {
-                if (!article.getCategory().equals(category)){
-                    removeList1.add(article);
-                }
+    //search for Id in List
+    public boolean isArticleInList(List<Article> articleListInput, Article articleCheck ){
+        Boolean IdFoundInList = false;
+        for (Article articleInput : articleListInput){
+            if (articleInput.getArticleId() == articleCheck.getArticleId()){
+                IdFoundInList = true;
             }
-            articleList.removeAll(removeList1);
         }
-
-
-        //Restriction 2 author
-        List<Article> removeList2 = new ArrayList<Article>();
-        if (author != null && author.length() > 0){
-            for (Article article : articleList) {
-                if (!article.getAuthor().equals(author)){
-                    removeList2.add(article);
-                }
-            }
-            articleList.removeAll(removeList2);
-        }
-
-
-        //Restriction 3 From Time
-        List<Article> removeList3 = new ArrayList<Article>();
-        if (fromCreateDateTime != null ){
-            for (Article article : articleList) {
-                if (fromCreateDateTime.isAfter(article.getCreateDateTime())){
-                    removeList3.add(article);
-                }
-            }
-            articleList.removeAll(removeList3);
-        }
-
-        //Restriction 3 toCreateDateTime
-        List<Article> removeList4 = new ArrayList<Article>();
-        if (toCreateDateTime != null ){
-            for (Article article : articleList) {
-                if (toCreateDateTime.isBefore(article.getCreateDateTime())){
-                    removeList4.add(article);
-                }
-            }
-            articleList.removeAll(removeList4);
-        }
-
-
-
-        return articleList;
+        return IdFoundInList;
     }
 
-    public Optional<Article> getArticlesById(Long articleId) {
+    //GET with Query
+    public List<Article> getArticlesQuery(String category, String author, LocalDateTime fromCreateDateTime, LocalDateTime toCreateDateTime, String title, String text, String fullText, String orderBy) {
+        List<Article> articleList = new ArrayList<Article>();
+
+        // add all if no filter is attached
+        if (category == null && author == null && fromCreateDateTime == null && toCreateDateTime == null && title == null && text == null && fullText == null){
+            articleList = articleRepository.findAll();
+            return articleList;
+        }
+        else {
+
+            //add articles with selected category
+            if (category != null && category.length() > 0){
+                for (Article article : articleRepository.findArticleByCategory(category)){
+                    //add found Articles to articleList
+                    if (!isArticleInList(articleList, article)){
+                        articleList.add(article);
+                    }
+                }
+            }
+
+            //add articles with selected author
+            if (author != null && author.length() > 0){
+                for (Article article : articleRepository.findArticleByAuthor(author)){
+                    //add found Articles to articleList
+                    if (!isArticleInList(articleList, article)){
+                        articleList.add(article);
+                    }
+                }
+            }
+
+            //find all articles in between
+            if (fromCreateDateTime != null && toCreateDateTime!=null){
+                for (Article article : articleRepository.findAllWithCreationDateTimeBetween(fromCreateDateTime,toCreateDateTime)){
+                    //add found Articles to articleList
+                    if (!isArticleInList(articleList, article)){
+                        articleList.add(article);
+                    }
+                }
+            }
+            else {
+                //add articles with fromCreateDateTime (Von Stichtag bis Zukunft)
+                if (fromCreateDateTime != null){
+                    for (Article article : articleRepository.findAllWithCreationDateTimeAfter(fromCreateDateTime)){
+                        //add found Articles to articleList
+                        if (!isArticleInList(articleList, article)){
+                            articleList.add(article);
+                        }
+                    }
+                }
+
+                //add articles with toCreateDateTime (Von Vergangenheit bis Stichtag)
+                if (toCreateDateTime != null){
+                    for (Article article : articleRepository.findAllWithCreationDateTimeBefore(toCreateDateTime)){
+                        //add found Articles to articleList
+                        if (!isArticleInList(articleList, article)){
+                            articleList.add(article);
+                        }
+                    }
+                }
+            }
+
+            //order by
+            if (orderBy == "CREATE_TIME_ASCENDING"){
+
+            }
+
+            else if(orderBy == "CREATE_TIME_DESCENDING"){
+
+            }
+
+            return articleList;
+        }
+    }
+
+    public Article getArticlesById(Long articleId) {
         Optional<Article> optionalArticle = articleRepository.findById(articleId);
         if (!optionalArticle.isPresent()){
             throw new IllegalStateException("Article with Id" + articleId + " does not exists");
         }
         else {
-            return optionalArticle;
+            return optionalArticle.get();
         }
-
     }
 
     //post
@@ -99,73 +126,25 @@ public class ArticleService {
 
         //Check if Category is valid
         Optional<Category> categoryOptional = categoryRepository.findCategoryByName(article.getCategory());
-        if (categoryOptional.isPresent()) {
-            System.out.printf("save Article", article.getTitle());
+        if (categoryOptional.isPresent()){
             articleRepository.save(article);
         }
         else {
             throw new IllegalStateException("Category " + article.getCategory() + " not available");
         }
-
-
-        System.out.println(article);
     }
 
-
     @Transactional
-    public void updateArticle(Long articleId, String title, String teaser, String text, String picture, String category, String author) {
-        System.out.println("Put");
-        Article article = articleRepository.getById(articleId);
-
-        //check if article exists
-        if (article == null){
-            throw new IllegalStateException("Article with Id" + articleId + " does not exists");
+    public void updateArticleEfficient(Article article){
+        Optional<Article> articleFound = articleRepository.findById(article.getArticleId());
+        if (articleFound.isPresent()){
+            //overrides Article with existing Id
+            article.setLastModifiedDateTime(LocalDateTime.now());
+            articleRepository.save(article);
         }
-
-        //indicator for changed
-        article.setLastModifiedDateTime(LocalDateTime.now());
-
-        //Business Logic
-        if (title != null &&
-            title.length() > 0 &&
-                !Objects.equals(article.getTitle(), title)) { //if title is not the same
-            article.setTitle(title);
+        else {
+            throw new IllegalStateException("Article with Id" + article.getArticleId() + " does not exists");
         }
-
-        if (teaser != null &&
-                teaser.length() > 0 &&
-                !Objects.equals(article.getTeaser(), teaser)) {
-            article.setTeaser(teaser);
-        }
-
-        if (text != null &&
-                text.length() > 0 &&
-                !Objects.equals(article.getText(), text)) { //if text is not the same
-            article.setText(text);
-        }
-
-        if (picture != null &&
-                picture.length() > 0 &&
-                !Objects.equals(article.getPicture(), picture)) { //if text is not the same
-            article.setPicture(picture);
-        }
-
-        if (category != null &&
-                category.length() > 0 &&
-                !Objects.equals(article.getCategory(), category)) { //if text is not the same
-            //Check if Category is valid
-            Optional<Category> categoryOptional = categoryRepository.findCategoryByName(article.getCategory());
-            if (categoryOptional.isPresent()) {
-                article.setCategory(category);
-            }
-        }
-
-        if (author != null &&
-                author.length() > 0 &&
-                !Objects.equals(article.getAuthor(), author)) { //if text is not the same
-            article.setAuthor(author);
-        }
-
     }
 
     public void deleteArticle(Long articleId) {
@@ -176,9 +155,5 @@ public class ArticleService {
         else {
             articleRepository.deleteById(articleId);
         }
-
     }
-
-
-
 }
